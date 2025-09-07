@@ -1,6 +1,7 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "MTC Attendance",
+  "name": "MTC Attendance Management System",
+  "description": "Hệ thống quản lý điểm danh Thiếu Nhi Thánh Thể",
   "icons": [
     {
       "src": "favicon.ico",
@@ -8,18 +9,21 @@
       "type": "image/x-icon"
     },
     {
-      "src": "logo192.png",
+      "src": "icon-192x192.png",
       "type": "image/png",
-      "sizes": "192x192"
+      "sizes": "192x192",
+      "purpose": "any maskable"
     },
     {
-      "src": "logo512.png",
+      "src": "icon-512x512.png",
       "type": "image/png",
       "sizes": "512x512"
     }
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "theme_color": "#5d4037",
+  "background_color": "#ffffff",
+  "categories": ["productivity", "education"],
+  "lang": "vi-VN"
 }

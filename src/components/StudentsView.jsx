@@ -1,10 +1,52 @@
 import React, { useRef, useState } from 'react';
 import EditStudentModal from './EditStudentModal';
+import * as XLSX from 'xlsx';
 
 const StudentsView = ({ students, LOP_LIST, handleAddStudent, handleDeleteStudent, handleImportCSV, handleUpdateStudent }) => {
   const fileInputRef = useRef(null);
   const [editingStudent, setEditingStudent] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  const expectedHeaders = [
+    "Tên Thánh", "Họ", "Tên Đệm", "Tên Gọi", "Ngày Sinh", "Ngành", "Email"
+  ];
+
+  // Chấp nhận file có nhiều cột, chỉ cần đủ các cột bắt buộc
+  const normalizeImportedData = (data) => {
+    const expectedHeaders = [
+      "Tên Thánh", "Họ", "Tên Đệm", "Tên Gọi", "Ngày Sinh", "Ngành", "Email"
+    ];
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      throw new Error("File không có dữ liệu.");
+    }
+    const headerMap = {};
+    Object.keys(data[0]).forEach(h => {
+      headerMap[h.trim()] = h;
+    });
+    const missing = expectedHeaders.filter(h => !headerMap[h]);
+    if (missing.length > 0) {
+      throw new Error("Thiếu cột: " + missing.join(', '));
+    }
+    return data.map(row => {
+      const obj = {};
+      expectedHeaders.forEach(header => {
+        let value = row[headerMap[header]] || '';
+        // Xử lý ngày sinh nếu là số (Excel serial)
+        if (header === "Ngày Sinh" && typeof value === "number") {
+          // Excel serial date to JS date
+          const date = new Date(Math.round((value - 25569) * 86400 * 1000));
+          value = date.toISOString().split('T')[0];
+        }
+        obj[header] = value;
+      });
+      // Thêm các cột phụ nếu có
+      obj["Tên Cha"] = row[headerMap["Tên Cha"]] || '';
+      obj["Tên Mẹ"] = row[headerMap["Tên Mẹ"]] || '';
+      obj["SĐT Cha"] = row[headerMap["SĐT Cha"]] || '';
+      obj["SĐT Mẹ"] = row[headerMap["SĐT Mẹ"]] || '';
+      return obj;
+    });
+  };
 
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
@@ -14,7 +56,8 @@ const StudentsView = ({ students, LOP_LIST, handleAddStudent, handleDeleteStuden
     reader.onload = (e) => {
       try {
         const csvData = parseCSV(e.target.result);
-        handleImportCSV(csvData);
+        const normalized = normalizeImportedData(csvData);
+        handleImportCSV(normalized);
       } catch (error) {
         console.error("Lỗi khi parse CSV:", error);
         alert('Lỗi khi đọc file CSV. Vui lòng kiểm tra định dạng file.');
@@ -26,24 +69,30 @@ const StudentsView = ({ students, LOP_LIST, handleAddStudent, handleDeleteStuden
     event.target.value = '';
   };
 
-  // Hàm parse CSV
+  // Hàm parse CSV mới
   const parseCSV = (csvText) => {
     const lines = csvText.split('\n').filter(line => line.trim());
-
-    // Lấy headers (dòng đầu tiên)
+    const expectedHeaders = [
+      "Tên Thánh", "Họ", "Tên Đệm", "Tên Gọi", "Ngày Sinh", "Ngành", "Email", "Số Điện Thoại"
+    ];
     const headers = lines[0].split(',').map(header => header.trim());
+
+    if (headers.length !== expectedHeaders.length ||
+        !headers.every((h, i) => h === expectedHeaders[i])) {
+      throw new Error("File CSV không đúng định dạng cột yêu cầu.");
+    }
 
     const results = [];
 
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i];
+      if (!line.trim()) continue;
       const values = [];
       let inQuotes = false;
       let currentValue = '';
 
       for (let j = 0; j < line.length; j++) {
         const char = line[j];
-
         if (char === '"' && (j === 0 || line[j - 1] !== '\\')) {
           inQuotes = !inQuotes;
         } else if (char === ',' && !inQuotes) {
@@ -57,7 +106,7 @@ const StudentsView = ({ students, LOP_LIST, handleAddStudent, handleDeleteStuden
 
       if (values.length === headers.length) {
         const row = {};
-        headers.forEach((header, index) => {
+        expectedHeaders.forEach((header, index) => {
           row[header] = values[index] || '';
         });
         results.push(row);
@@ -85,29 +134,63 @@ const StudentsView = ({ students, LOP_LIST, handleAddStudent, handleDeleteStuden
     setEditingStudent(null);
   };
 
+  // Xử lý import Excel
+  const handleImportExcel = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+        const normalized = normalizeImportedData(jsonData);
+        handleImportCSV(normalized);
+      } catch (error) {
+        console.error("Lỗi khi đọc file Excel:", error);
+        alert('Lỗi khi đọc file Excel. Vui lòng kiểm tra định dạng file.');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
   return (
     <div className="view-container">
       <h2 className="title">Quản Lý Học Sinh</h2>
 
-      {/* Section Import CSV */}
+      {/* Section Import CSV/Excel */}
       <div className="table-container" style={{ marginBottom: '24px', padding: '16px' }}>
         <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', color: '#5d4037' }}>
-          📥 Import từ CSV
+          📥 Import từ Excel/CSV
         </h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <button onClick={handleImportClick} className="button-primary">
-              Chọn file CSV
+              Chọn file Excel/CSV
             </button>
             <input
               type="file"
               ref={fileInputRef}
-              onChange={handleFileUpload}
-              accept=".csv"
+              onChange={(e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const ext = file.name.split('.').pop().toLowerCase();
+                if (ext === 'csv') {
+                  handleFileUpload(e);
+                } else if (ext === 'xlsx' || ext === 'xls') {
+                  handleImportExcel(e);
+                } else {
+                  alert('Chỉ hỗ trợ file .csv, .xls, .xlsx');
+                }
+              }}
+              accept=".csv,.xls,.xlsx"
               style={{ display: 'none' }}
             />
             <span style={{ fontSize: '14px', color: '#666' }}>
-              Chọn file CSV để import dữ liệu học sinh
+              Chọn file Excel (.xls, .xlsx) hoặc CSV để import dữ liệu học sinh
             </span>
           </div>
 
@@ -118,7 +201,7 @@ const StudentsView = ({ students, LOP_LIST, handleAddStudent, handleDeleteStuden
             border: '1px dashed #dee2e6'
           }}>
             <h4 style={{ margin: '0 0 8px 0', fontSize: '14px', color: '#495057' }}>
-              📋 Định dạng CSV yêu cầu:
+              📋 Định dạng file yêu cầu:
             </h4>
             <ul style={{
               margin: 0,
@@ -126,7 +209,7 @@ const StudentsView = ({ students, LOP_LIST, handleAddStudent, handleDeleteStuden
               fontSize: '13px',
               color: '#6c757d'
             }}>
-              <li>Cột: Tên Thánh, Họ, Tên Đệm, Tên Gọi, Ngày Sinh, Ngành, Tên Cha, Tên Mẹ, SĐT Cha, SĐT Mẹ, Email</li>
+              <li>Cột: <b>Tên Thánh, Họ, Tên Đệm, Tên Gọi, Ngày Sinh, Ngành, Email, Số Điện Thoại</b></li>
               <li>File phải có header (dòng đầu tiên)</li>
               <li>Định dạng ngày: MM/DD/YYYY hoặc YYYY-MM-DD</li>
             </ul>

@@ -22,9 +22,9 @@ const App = () => {
     message,
     LOP_LIST,
     DIEM_DIEM_DANH,
-    selectedWeek,
-    setSelectedWeek,
-    generateWeekOptions,
+    selectedMonth,
+    setSelectedMonth,
+    generateMonthOptions,
     handleSaveAttendance,
     handleAddStudent,
     handleDeleteStudent,
@@ -47,7 +47,7 @@ const App = () => {
     );
   }
 
-  const weeklyReport = calculateReport();
+  const monthlyReport = calculateReport();
 
   return (
     <div className="main-container">
@@ -93,12 +93,12 @@ const App = () => {
 
       {view === 'report' && (
         <ReportView
-          reportData={weeklyReport.reportData}
-          groupedByClass={weeklyReport.groupedByClass}
-          weekInfo={weeklyReport.weekInfo}
-          selectedWeek={selectedWeek}
-          setSelectedWeek={setSelectedWeek}
-          weekOptions={generateWeekOptions()}
+          reportData={monthlyReport.reportData}
+          groupedByClass={monthlyReport.groupedByClass}
+          monthInfo={monthlyReport.monthInfo}
+          selectedMonth={selectedMonth}
+          setSelectedMonth={setSelectedMonth}
+          monthOptions={generateMonthOptions()}
           reportFilterLop={reportFilterLop}
           setReportFilterLop={setReportFilterLop}
           LOP_LIST={LOP_LIST}

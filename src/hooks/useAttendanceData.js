@@ -1,14 +1,13 @@
 import { useState, useEffect } from 'react';
 import { collection, onSnapshot, addDoc, deleteDoc, doc, updateDoc, query, where, getDocs } from 'firebase/firestore';
 
-// Đưa thẳng appId vào code
 const appId = 'mtc-attendance-app';
 
-const LOP_LIST = [
+export const LOP_LIST = [
     "Ấu Nhi Dự Bị", "Ấu Nhi Cấp 1", "Ấu Nhi Cấp 2", "Ấu Nhi Cấp 3",
     "Thiếu Nhi Cấp 1", "Thiếu Nhi Cấp 2", "Thiếu Nhi Cấp 3",
     "Nghĩa Sĩ Cấp 1", "Nghĩa Sĩ Cấp 2", "Nghĩa Sĩ Cấp 3",
-    "Hiệp Sĩ Cấp 1", "Hiệp Sĩ Cấp 2", "Hiệp Sĩ Trưởng Thành", "Huynh Trưởng"
+    "Hiệp Sĩ Cấp 1", "Hiệp Sĩ Cấp 2", "Hiệp Sĩ Trưởng Thành", "Huynh Trưởng", "Huấn Luyện Viên"
 ];
 
 const DIEM_DIEM_DANH = {
@@ -18,6 +17,24 @@ const DIEM_DIEM_DANH = {
     "vắng mặt": 0
 };
 
+function getCurrentMonth() {
+    const now = new Date();
+    return `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
+}
+
+function generateMonthOptions() {
+    const options = [];
+    const currentYear = new Date().getFullYear();
+    for (let month = 1; month <= 12; month++) {
+        const monthStr = month.toString().padStart(2, '0');
+        options.push({
+            value: `${currentYear}-${monthStr}`,
+            label: `Tháng ${monthStr}/${currentYear}`
+        });
+    }
+    return options;
+}
+
 export const useAttendanceData = (db) => {
     const [students, setStudents] = useState([]);
     const [attendanceRecords, setAttendanceRecords] = useState([]);
@@ -26,67 +43,8 @@ export const useAttendanceData = (db) => {
     const [currentAttendance, setCurrentAttendance] = useState({});
     const [isLoading, setIsLoading] = useState(true);
     const [message, setMessage] = useState(null);
-    const [selectedWeek, setSelectedWeek] = useState(getCurrentWeek());
+    const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
     const [reportFilterLop, setReportFilterLop] = useState('Tất cả');
-
-    // Hàm lấy tuần hiện tại (format: YYYY-Www)
-    function getCurrentWeek() {
-        const now = new Date();
-        const startOfYear = new Date(now.getFullYear(), 0, 1);
-        const pastDaysOfYear = (now - startOfYear) / 86400000;
-        return `${now.getFullYear()}-W${Math.ceil((pastDaysOfYear + startOfYear.getDay() + 1) / 7).toString().padStart(2, '0')}`;
-    }
-
-    // Hàm lấy thông tin chi tiết về tuần (CN đến T7)
-    function getWeekInfo(weekString) {
-        const [year, week] = weekString.split('-W');
-        const simple = new Date(parseInt(year), 0, 1 + (parseInt(week) - 1) * 7);
-        const dow = simple.getDay();
-        const weekStart = new Date(simple);
-
-        // Điều chỉnh để Chủ Nhật là ngày đầu tuần
-        if (dow === 0) {
-            weekStart.setDate(simple.getDate() - 6);
-        } else {
-            weekStart.setDate(simple.getDate() - simple.getDay() + 1);
-        }
-
-        const dates = [];
-        const days = ['Chủ Nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
-
-        for (let i = 0; i < 7; i++) {
-            const date = new Date(weekStart);
-            date.setDate(weekStart.getDate() + i);
-            dates.push({
-                date: date.toISOString().split('T')[0],
-                day: days[date.getDay()],
-                display: `${days[date.getDay()]} (${date.toLocaleDateString('vi-VN')})`
-            });
-        }
-
-        return {
-            startDate: weekStart.toISOString().split('T')[0],
-            endDate: new Date(weekStart.getTime() + 6 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            dates: dates,
-            display: `Tuần ${week} (${dates[0].date} đến ${dates[6].date})`
-        };
-    }
-
-    // Hàm tạo danh sách các tuần có thể chọn
-    function generateWeekOptions() {
-        const options = [];
-        const currentYear = new Date().getFullYear();
-
-        for (let week = 1; week <= 52; week++) {
-            const weekStr = week.toString().padStart(2, '0');
-            const weekInfo = getWeekInfo(`${currentYear}-W${weekStr}`);
-            options.push({
-                value: `${currentYear}-W${weekStr}`,
-                label: `Tuần ${weekStr} (${weekInfo.startDate} đến ${weekInfo.endDate})`
-            });
-        }
-        return options;
-    }
 
     useEffect(() => {
         if (!db) return;
@@ -94,7 +52,12 @@ export const useAttendanceData = (db) => {
         const studentsRef = collection(db, `artifacts/${appId}/public/data/students`);
         const unsubscribeStudents = onSnapshot(studentsRef, (snapshot) => {
             const studentData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setStudents(studentData.sort((a, b) => a.hoTen.localeCompare(b.hoTen)));
+            // Sắp xếp theo thứ tự đội (LOP_LIST)
+            setStudents(
+                studentData.sort(
+                    (a, b) => LOP_LIST.indexOf(a.lop) - LOP_LIST.indexOf(b.lop)
+                )
+            );
             setIsLoading(false);
         }, (error) => {
             console.error("Error listening to students:", error);
@@ -239,7 +202,6 @@ export const useAttendanceData = (db) => {
 
             for (const row of csvData) {
                 try {
-                    // Chuẩn hóa dữ liệu từ CSV
                     const studentData = {
                         tenThanh: row['Tên Thánh']?.trim() || '',
                         hoTen: `${row['Họ']?.trim() || ''} ${row['Tên Đệm']?.trim() || ''} ${row['Tên Gọi']?.trim() || ''}`.trim(),
@@ -252,7 +214,6 @@ export const useAttendanceData = (db) => {
                         email: row['Email']?.trim() || ''
                     };
 
-                    // Chỉ thêm nếu có đủ thông tin cơ bản
                     if (studentData.hoTen && studentData.lop) {
                         await addDoc(studentsRef, studentData);
                         importedCount++;
@@ -271,26 +232,22 @@ export const useAttendanceData = (db) => {
         }
     };
 
-    // Hàm format số điện thoại
     const formatPhone = (phone) => {
         if (!phone) return '';
-        return phone.toString().replace(/\D/g, ''); // Chỉ giữ lại số
+        return phone.toString().replace(/\D/g, '');
     };
 
-    // Hàm format ngày tháng
     const formatDate = (dateString) => {
         if (!dateString) return '';
 
         try {
-            // Xử lý nhiều định dạng ngày tháng
             const date = new Date(dateString);
             if (isNaN(date.getTime())) {
-                // Thử parse định dạng khác
                 const parts = dateString.split('/');
                 if (parts.length === 3) {
                     return `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
                 }
-                return dateString; // Trả về nguyên bản nếu không parse được
+                return dateString;
             }
             return date.toISOString().split('T')[0];
         } catch {
@@ -298,17 +255,20 @@ export const useAttendanceData = (db) => {
         }
     };
 
-    const calculateWeeklyReport = () => {
+    // --------- BÁO CÁO THEO THÁNG -----------
+    const calculateMonthlyReport = () => {
         const reportData = {};
-        const weekInfo = getWeekInfo(selectedWeek);
-        const weekDates = weekInfo.dates.map(d => d.date);
+        const [year, month] = selectedMonth.split('-');
+        const daysInMonth = new Date(year, month, 0).getDate();
+        const monthDates = [];
+        for (let d = 1; d <= daysInMonth; d++) {
+            monthDates.push(`${year}-${month.padStart(2, '0')}-${d.toString().padStart(2, '0')}`);
+        }
 
         students.forEach(student => {
-            // Lọc theo lớp nếu được chọn
             if (reportFilterLop !== 'Tất cả' && student.lop !== reportFilterLop) {
                 return;
             }
-
             reportData[student.id] = {
                 hoTen: student.hoTen,
                 lop: student.lop,
@@ -318,12 +278,11 @@ export const useAttendanceData = (db) => {
             };
         });
 
-        // Lọc các bản ghi điểm danh trong tuần được chọn
-        const weeklyRecords = attendanceRecords.filter(record =>
-            weekDates.includes(record.ngayDiemDanh)
+        const monthlyRecords = attendanceRecords.filter(record =>
+            monthDates.includes(record.ngayDiemDanh)
         );
 
-        weeklyRecords.forEach(record => {
+        monthlyRecords.forEach(record => {
             if (record && record.diemDanh) {
                 Object.entries(record.diemDanh).forEach(([studentId, attendance]) => {
                     if (reportData[studentId]) {
@@ -351,7 +310,6 @@ export const useAttendanceData = (db) => {
             }
         });
 
-        // Nhóm theo lớp
         const groupedByClass = {};
         Object.values(reportData).forEach(student => {
             if (!groupedByClass[student.lop]) {
@@ -360,30 +318,38 @@ export const useAttendanceData = (db) => {
             groupedByClass[student.lop].push(student);
         });
 
-        // Sắp xếp theo điểm số (cao đến thấp) trong từng lớp
         Object.keys(groupedByClass).forEach(lop => {
             groupedByClass[lop].sort((a, b) => b.totalScore - a.totalScore);
         });
 
-        // Sắp xếp các lớp theo thứ tự LOP_LIST
         const sortedGroupedByClass = {};
         LOP_LIST.forEach(lop => {
             if (groupedByClass[lop]) {
                 sortedGroupedByClass[lop] = groupedByClass[lop];
             }
         });
-
-        // Thêm các lớp không có trong LOP_LIST (nếu có)
         Object.keys(groupedByClass).forEach(lop => {
             if (!sortedGroupedByClass[lop]) {
                 sortedGroupedByClass[lop] = groupedByClass[lop];
             }
         });
 
+        // Thông tin tháng để hiển thị
+        const monthInfo = {
+            year,
+            month,
+            days: monthDates
+        };
+
+        // Sắp xếp reportData theo LOP_LIST
+        const sortedReportData = Object.values(reportData).sort(
+            (a, b) => LOP_LIST.indexOf(a.lop) - LOP_LIST.indexOf(b.lop)
+        );
+
         return {
-            reportData: Object.values(reportData),
+            reportData: sortedReportData,
             groupedByClass: sortedGroupedByClass,
-            weekInfo: weekInfo
+            monthInfo
         };
     };
 
@@ -414,13 +380,13 @@ export const useAttendanceData = (db) => {
         message,
         LOP_LIST,
         DIEM_DIEM_DANH,
-        selectedWeek,
-        setSelectedWeek,
-        generateWeekOptions,
+        selectedMonth,
+        setSelectedMonth,
+        generateMonthOptions,
         handleSaveAttendance,
         handleAddStudent,
         handleDeleteStudent,
-        calculateReport: calculateWeeklyReport,
+        calculateReport: calculateMonthlyReport,
         handleImportCSV,
         reportFilterLop,
         setReportFilterLop,

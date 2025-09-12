@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useFirebase } from './hooks/useFirebase';
-import { useAttendanceData } from './hooks/useAttendanceData';
+import { useStudentData, LOP_LIST } from './hooks/useStudentData';
+import { useAttendanceRecords, DIEM_DIEM_DANH } from './hooks/useAttendanceRecords';
 import AttendanceView from './components/AttendanceView';
 import StudentsView from './components/StudentsView';
 import ReportView from './components/ReportView';
@@ -10,30 +11,34 @@ import MessageBox from './components/MessageBox';
 const App = () => {
   const [view, setView] = useState('attendance');
   const { db, error: firebaseError } = useFirebase();
+
+  // Quản lý học sinh
   const {
     students,
+    isLoading,
+    message,
+    handleAddStudent,
+    handleDeleteStudent,
+    handleImportCSV,
+    handleUpdateStudent,
+  } = useStudentData(db);
+
+  // Quản lý điểm danh
+  const {
     selectedLop,
     setSelectedLop,
     selectedDate,
     setSelectedDate,
     currentAttendance,
     setCurrentAttendance,
-    isLoading,
-    message,
-    LOP_LIST,
-    DIEM_DIEM_DANH,
     selectedMonth,
     setSelectedMonth,
     generateMonthOptions,
     handleSaveAttendance,
-    handleAddStudent,
-    handleDeleteStudent,
     calculateReport,
-    handleImportCSV,
     reportFilterLop,
     setReportFilterLop,
-    handleUpdateStudent,
-  } = useAttendanceData(db);
+  } = useAttendanceRecords(db, students, LOP_LIST);
 
   if (isLoading) {
     return <LoadingSpinner />;
@@ -94,7 +99,6 @@ const App = () => {
       {view === 'report' && (
         <ReportView
           reportData={monthlyReport.reportData}
-          groupedByClass={monthlyReport.groupedByClass}
           monthInfo={monthlyReport.monthInfo}
           selectedMonth={selectedMonth}
           setSelectedMonth={setSelectedMonth}

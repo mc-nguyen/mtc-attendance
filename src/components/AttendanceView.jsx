@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LOP_LIST } from '../hooks/useAttendanceData'; // Thêm dòng này nếu cần
+import { LOP_LIST } from '../hooks/useStudentData'; // Đã chuyển sang hook mới
 
 const NGANH_MAP = {
   "Ấu Nhi": [

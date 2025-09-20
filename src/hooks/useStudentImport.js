@@ -1,7 +1,8 @@
 import * as XLSX from 'xlsx';
 
 export const expectedHeaders = [
-    "Tên Thánh", "Họ", "Tên Đệm", "Tên Gọi", "Ngày Sinh", "Ngành", "Email"
+    "Tên Thánh", "Họ", "Tên Đệm", "Tên Gọi", "Ngày Sinh", "Ngành", "Email",
+    "SĐT Cá Nhân", "SĐT Cha", "SĐT Mẹ", "Tên Cha", "Tên Mẹ"
 ];
 
 export function normalizeImportedData(data) {
@@ -26,10 +27,6 @@ export function normalizeImportedData(data) {
             }
             obj[header] = value;
         });
-        obj["Tên Cha"] = row[headerMap["Tên Cha"]] || '';
-        obj["Tên Mẹ"] = row[headerMap["Tên Mẹ"]] || '';
-        obj["SĐT Cha"] = row[headerMap["SĐT Cha"]] || '';
-        obj["SĐT Mẹ"] = row[headerMap["SĐT Mẹ"]] || '';
         return obj;
     });
 }
@@ -44,6 +41,7 @@ export function parseCSV(csvText) {
         const values = [];
         let inQuotes = false;
         let currentValue = '';
+        ;
         for (let j = 0; j < line.length; j++) {
             const char = line[j];
             if (char === '"' && (j === 0 || line[j - 1] !== '\\')) {

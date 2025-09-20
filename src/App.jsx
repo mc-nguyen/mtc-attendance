@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useFirebase } from './hooks/useFirebase';
 import { useStudentData, LOP_LIST } from './hooks/useStudentData';
-import { useAttendanceRecords, DIEM_DIEM_DANH } from './hooks/useAttendanceRecords';
+import { useAttendanceRecords } from './hooks/useAttendanceRecords';
 import AttendanceView from './components/AttendanceView';
 import StudentsView from './components/StudentsView';
 import ReportView from './components/ReportView';
@@ -11,6 +11,8 @@ import MessageBox from './components/MessageBox';
 const App = () => {
   const [view, setView] = useState('attendance');
   const { db, error: firebaseError } = useFirebase();
+  const [monthlyReport, setMonthlyReport] = useState({ reportData: [], monthInfo: {} });
+  const [reportLoading, setReportLoading] = useState(false);
 
   // Quản lý học sinh
   const {
@@ -25,8 +27,8 @@ const App = () => {
 
   // Quản lý điểm danh
   const {
-    selectedLop,
-    setSelectedLop,
+    selectedNganh,
+    setSelectedNganh,
     selectedDate,
     setSelectedDate,
     currentAttendance,
@@ -36,11 +38,23 @@ const App = () => {
     generateMonthOptions,
     handleSaveAttendance,
     calculateReport,
-    reportFilterLop,
-    setReportFilterLop,
   } = useAttendanceRecords(db, students, LOP_LIST);
 
-  if (isLoading) {
+  // Thêm useEffect để gọi hàm báo cáo bất đồng bộ
+  useEffect(() => {
+    const fetchReport = async () => {
+      setReportLoading(true);
+      const report = await calculateReport();
+      setMonthlyReport(report);
+      setReportLoading(false);
+    };
+
+    if (view === 'report' && students.length > 0) {
+      fetchReport();
+    }
+  }, [view, selectedMonth, students, calculateReport]);
+
+  if (isLoading || reportLoading) {
     return <LoadingSpinner />;
   }
 
@@ -51,8 +65,6 @@ const App = () => {
       </div>
     );
   }
-
-  const monthlyReport = calculateReport();
 
   return (
     <div className="main-container">
@@ -73,15 +85,13 @@ const App = () => {
       {view === 'attendance' && (
         <AttendanceView
           students={students}
-          selectedLop={selectedLop}
           selectedDate={selectedDate}
-          setSelectedLop={setSelectedLop}
           setSelectedDate={setSelectedDate}
           currentAttendance={currentAttendance}
           setCurrentAttendance={setCurrentAttendance}
           handleSaveAttendance={handleSaveAttendance}
-          LOP_LIST={LOP_LIST}
-          DIEM_DIEM_DANH={DIEM_DIEM_DANH}
+          selectedNganh={selectedNganh}
+          setSelectedNganh={setSelectedNganh}
         />
       )}
 
@@ -103,8 +113,6 @@ const App = () => {
           selectedMonth={selectedMonth}
           setSelectedMonth={setSelectedMonth}
           monthOptions={generateMonthOptions()}
-          reportFilterLop={reportFilterLop}
-          setReportFilterLop={setReportFilterLop}
           LOP_LIST={LOP_LIST}
         />
       )}

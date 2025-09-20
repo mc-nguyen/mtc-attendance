@@ -53,6 +53,35 @@ const EditStudentModal = ({ student, isOpen, onClose, onUpdate, LOP_LIST }) => {
         }));
     };
 
+    // Thêm hàm format phone trong component
+    const formatPhoneInput = (value) => {
+        if (!value) return '';
+
+        // Chỉ giữ lại số
+        let cleaned = value.toString().replace(/\D/g, '');
+
+        // Format số điện thoại Việt Nam
+        if (cleaned.length === 10) {
+            return cleaned.replace(/(\d{3})(\d{3})(\d{4})/, '$1 $2 $3');
+        } else if (cleaned.length === 11 && cleaned.startsWith('0')) {
+            return cleaned.replace(/(\d{3})(\d{4})(\d{4})/, '$1 $2 $3');
+        } else if (cleaned.length === 9) {
+            return cleaned.replace(/(\d{3})(\d{3})(\d{3})/, '$1 $2 $3');
+        }
+
+        return cleaned;
+    };
+
+    // Thêm handler cho input phone
+    const handlePhoneChange = (e) => {
+        const { name, value } = e.target;
+        const formattedValue = formatPhoneInput(value);
+        setFormData(prev => ({
+            ...prev,
+            [name]: formattedValue
+        }));
+    };
+
     if (!isOpen) return null;
 
     return (
@@ -113,12 +142,12 @@ const EditStudentModal = ({ student, isOpen, onClose, onUpdate, LOP_LIST }) => {
                         </div>
 
                         <div className="form-group">
-                            <label>SĐT Học Sinh</label>
+                            <label>SĐT Cá Nhân</label>
                             <input
                                 type="tel"
                                 name="soDienThoai"
                                 value={formData.soDienThoai}
-                                onChange={handleChange}
+                                onChange={handlePhoneChange}
                                 placeholder="Số điện thoại"
                             />
                         </div>
@@ -140,7 +169,7 @@ const EditStudentModal = ({ student, isOpen, onClose, onUpdate, LOP_LIST }) => {
                                 type="tel"
                                 name="soDienThoaiCha"
                                 value={formData.soDienThoaiCha}
-                                onChange={handleChange}
+                                onChange={handlePhoneChange}
                                 placeholder="SĐT cha"
                             />
                         </div>
@@ -162,7 +191,7 @@ const EditStudentModal = ({ student, isOpen, onClose, onUpdate, LOP_LIST }) => {
                                 type="tel"
                                 name="soDienThoaiMe"
                                 value={formData.soDienThoaiMe}
-                                onChange={handleChange}
+                                onChange={handlePhoneChange}
                                 placeholder="SĐT mẹ"
                             />
                         </div>

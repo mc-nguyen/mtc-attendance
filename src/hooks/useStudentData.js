@@ -78,8 +78,26 @@ export function useStudentData(db) {
   // Import CSV/Excel
   const formatPhone = (phone) => {
     if (!phone) return '';
-    return phone.toString().replace(/\D/g, '');
+
+    // Chỉ giữ lại số
+    let cleaned = phone.toString().replace(/\D/g, '');
+
+    // Format số điện thoại Việt Nam
+    if (cleaned.length === 10) {
+      // Format: 0123 456 789
+      return cleaned.replace(/(\d{3})(\d{3})(\d{4})/, '$1 $2 $3');
+    } else if (cleaned.length === 11 && cleaned.startsWith('0')) {
+      // Format: 012 3456 7890
+      return cleaned.replace(/(\d{3})(\d{4})(\d{4})/, '$1 $2 $3');
+    } else if (cleaned.length === 9) {
+      // Format: 123 456 789
+      return cleaned.replace(/(\d{3})(\d{3})(\d{3})/, '$1 $2 $3');
+    }
+
+    // Trả về số gốc nếu không match định dạng nào
+    return cleaned;
   };
+
   const formatDate = (dateString) => {
     if (!dateString) return '';
     try {
@@ -103,29 +121,47 @@ export function useStudentData(db) {
       const studentsRef = collection(db, `artifacts/${appId}/public/data/students`);
       let importedCount = 0;
       let errorCount = 0;
+
       for (const row of csvData) {
         try {
+          // Xác định ngành để xử lý SĐT phù hợp
+          const nganh = row['Ngành']?.trim() || '';
+          const isHuynhTruong = nganh.includes("Huynh Trưởng") ||
+            nganh.includes("Hiệp Sĩ Trưởng Thành") ||
+            nganh.includes("Huấn Luyện Viên");
+
+          // Tự động format các số điện thoại
+          const sdtCaNhan = formatPhone(row['SĐT Cá Nhân']);
+          const sdtCha = formatPhone(row['SĐT Cha']);
+          const sdtMe = formatPhone(row['SĐT Mẹ']);
+
           const studentData = {
             tenThanh: row['Tên Thánh']?.trim() || '',
             hoTen: `${row['Họ']?.trim() || ''} ${row['Tên Đệm']?.trim() || ''} ${row['Tên Gọi']?.trim() || ''}`.trim(),
             ngaySinh: formatDate(row['Ngày Sinh']),
-            lop: row['Ngành']?.trim() || '',
+            lop: nganh,
             tenCha: row['Tên Cha']?.trim() || '',
             tenMe: row['Tên Mẹ']?.trim() || '',
-            soDienThoaiCha: formatPhone(row['SĐT Cha']),
-            soDienThoaiMe: formatPhone(row['SĐT Mẹ']),
-            email: row['Email']?.trim() || ''
+            soDienThoaiCha: sdtCha,
+            soDienThoaiMe: sdtMe,
+            email: row['Email']?.trim() || '',
+            // Huynh Trưởng dùng SĐT cá nhân, các ngành khác ưu tiên SĐT Cha/Mẹ
+            soDienThoai: isHuynhTruong ? sdtCaNhan : (sdtCha || sdtMe || '')
           };
+
           if (studentData.hoTen && studentData.lop) {
             await addDoc(studentsRef, studentData);
             importedCount++;
           }
-        } catch {
+        } catch (error) {
+          console.error("Lỗi khi import học sinh:", error);
           errorCount++;
         }
       }
+
       setMessage(`Đã import thành công ${importedCount} học sinh. ${errorCount > 0 ? `Có ${errorCount} lỗi.` : ''}`);
-    } catch {
+    } catch (error) {
+      console.error("Lỗi khi import CSV:", error);
       setMessage('Lỗi khi import CSV. Vui lòng thử lại.');
     }
   };

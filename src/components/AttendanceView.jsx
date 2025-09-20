@@ -40,12 +40,13 @@ const AttendanceView = ({
   currentAttendance,
   setCurrentAttendance,
   handleSaveAttendance,
+  selectedNganh,
+  setSelectedNganh,
 }) => {
   // Chọn năm/tháng/ngành
   const now = new Date();
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
-  const [selectedNganh, setSelectedNganh] = useState("Tất cả");
 
   // Danh sách năm/tháng
   const yearOptions = [];

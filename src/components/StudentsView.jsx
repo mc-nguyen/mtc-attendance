@@ -9,6 +9,8 @@ const StudentsView = ({ students, LOP_LIST, handleAddStudent, handleDeleteStuden
   const [editingStudent, setEditingStudent] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
+  // Đã chuyển các hàm import sang hook riêng, không cần expectedHeaders và handleFileUpload ở đây
+
   const handleImportClick = () => {
     fileInputRef.current?.click();
   };
@@ -46,6 +48,25 @@ const StudentsView = ({ students, LOP_LIST, handleAddStudent, handleDeleteStuden
       alert('Chỉ hỗ trợ file .csv, .xls, .xlsx');
     }
     e.target.value = '';
+  };
+
+  const formatPhoneInput = (value) => {
+    if (!value) return '';
+    let cleaned = value.toString().replace(/\D/g, '');
+    if (cleaned.length === 10) {
+      return cleaned.replace(/(\d{3})(\d{3})(\d{4})/, '$1 $2 $3');
+    } else if (cleaned.length === 11 && cleaned.startsWith('0')) {
+      return cleaned.replace(/(\d{3})(\d{4})(\d{4})/, '$1 $2 $3');
+    } else if (cleaned.length === 9) {
+      return cleaned.replace(/(\d{3})(\d{3})(\d{3})/, '$1 $2 $3');
+    }
+    return cleaned;
+  };
+
+  // Thêm handler cho form
+  const handlePhoneInputChange = (e) => {
+    const formattedValue = formatPhoneInput(e.target.value);
+    e.target.value = formattedValue;
   };
 
   return (
@@ -89,9 +110,11 @@ const StudentsView = ({ students, LOP_LIST, handleAddStudent, handleDeleteStuden
               fontSize: '13px',
               color: '#6c757d'
             }}>
-              <li>Cột: <b>Tên Thánh, Họ, Tên Đệm, Tên Gọi, Ngày Sinh, Ngành, Email, Số Điện Thoại</b></li>
+              <li>Cột bắt buộc: <b>Tên Thánh, Họ, Tên Đệm, Tên Gọi, Ngày Sinh, Ngành</b></li>
+              <li>Cột tùy chọn: <b>Email, SĐT Cá Nhân, SĐT Cha, SĐT Mẹ, Tên Cha, Tên Mẹ</b></li>
               <li>File phải có header (dòng đầu tiên)</li>
               <li>Định dạng ngày: MM/DD/YYYY hoặc YYYY-MM-DD</li>
+              <li><b>Lưu ý:</b> Huynh Trưởng dùng SĐT Cá Nhân, các ngành khác dùng SĐT Cha/Mẹ</li>
             </ul>
           </div>
         </div>
@@ -117,7 +140,7 @@ const StudentsView = ({ students, LOP_LIST, handleAddStudent, handleDeleteStuden
           </div>
           <div>
             <label htmlFor="soDienThoai" className="label">SĐT (Cha/Mẹ)</label>
-            <input type="tel" id="soDienThoai" name="soDienThoai" className="input-field" />
+            <input type="tel" id="soDienThoai" name="soDienThoai" className="input-field" onChange={handlePhoneInputChange} />
           </div>
           <div>
             <label htmlFor="tenCha" className="label">Tên Cha</label>

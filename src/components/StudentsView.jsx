@@ -4,6 +4,24 @@ import {
   handleImportExcel,
 } from '../hooks/useStudentImport';
 
+const NGANH_MAP = {
+  "Ấu Nhi": [
+    "Ấu Nhi Dự Bị", "Ấu Nhi Cấp 1", "Ấu Nhi Cấp 2", "Ấu Nhi Cấp 3"
+  ],
+  "Thiếu Nhi": [
+    "Thiếu Nhi Cấp 1", "Thiếu Nhi Cấp 2", "Thiếu Nhi Cấp 3"
+  ],
+  "Nghĩa Sĩ": [
+    "Nghĩa Sĩ Cấp 1", "Nghĩa Sĩ Cấp 2", "Nghĩa Sĩ Cấp 3"
+  ],
+  "Hiệp Sĩ": [
+    "Hiệp Sĩ Cấp 1", "Hiệp Sĩ Cấp 2"
+  ],
+  "Huynh Trưởng": [
+    "Hiệp Sĩ Trưởng Thành", "Huynh Trưởng", "Huấn Luyện Viên"
+  ]
+};
+
 const StudentsView = ({ students, LOP_LIST, handleAddStudent, handleDeleteStudent, handleImportCSV, handleUpdateStudent }) => {
   const fileInputRef = useRef(null);
   const [editingStudent, setEditingStudent] = useState(null);
@@ -69,6 +87,15 @@ const StudentsView = ({ students, LOP_LIST, handleAddStudent, handleDeleteStuden
     e.target.value = formattedValue;
   };
 
+  const getNganhFromLop = (lop) => {
+    for (const [nganh, classes] of Object.entries(NGANH_MAP)) {
+      if (classes.includes(lop)) {
+        return nganh;
+      }
+    }
+    return "Khác";
+  };
+
   return (
     <div className="view-container">
       <h2 className="title">Quản Lý Học Sinh</h2>
@@ -115,6 +142,7 @@ const StudentsView = ({ students, LOP_LIST, handleAddStudent, handleDeleteStuden
               <li>File phải có header (dòng đầu tiên)</li>
               <li>Định dạng ngày: MM/DD/YYYY hoặc YYYY-MM-DD</li>
               <li><b>Lưu ý:</b> Huynh Trưởng dùng SĐT Cá Nhân, các ngành khác dùng SĐT Cha/Mẹ</li>
+              <li><b>Tự động kiểm tra trùng lặp:</b> Hệ thống sẽ không import trùng và cập nhật thông tin nếu cần thiết</li>
             </ul>
           </div>
         </div>
@@ -183,7 +211,7 @@ const StudentsView = ({ students, LOP_LIST, handleAddStudent, handleDeleteStuden
           <tbody>
             {students.length > 0 ? (
               students.map(student => (
-                <tr key={student.id} className="table-row">
+                <tr key={student.id} className="table-row" data-nganh={getNganhFromLop(student.lop)}>
                   <td className="table-cell bold">{student.tenThanh}</td>
                   <td className="table-cell">{student.hoTen}</td>
                   <td className="table-cell">{student.ngaySinh}</td>

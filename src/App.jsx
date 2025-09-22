@@ -113,7 +113,7 @@ const App = () => {
           selectedMonth={selectedMonth}
           setSelectedMonth={setSelectedMonth}
           monthOptions={generateMonthOptions()}
-          LOP_LIST={LOP_LIST}
+          sundays={monthlyReport.sundays || []}
         />
       )}
 

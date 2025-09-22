@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
-import { collection, onSnapshot, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { 
+  collection, onSnapshot, addDoc, deleteDoc, doc, updateDoc, 
+  getDocs // Thêm getDocs
+} from 'firebase/firestore';
 
 export const LOP_LIST = [
   "Ấu Nhi Dự Bị", "Ấu Nhi Cấp 1", "Ấu Nhi Cấp 2", "Ấu Nhi Cấp 3",
@@ -120,7 +123,16 @@ export function useStudentData(db) {
     try {
       const studentsRef = collection(db, `artifacts/${appId}/public/data/students`);
       let importedCount = 0;
+      let updatedCount = 0;
       let errorCount = 0;
+      let skippedCount = 0;
+
+      // Lấy tất cả học sinh hiện có để kiểm tra duplicate
+      const existingStudentsSnapshot = await getDocs(studentsRef);
+      const existingStudents = existingStudentsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
 
       for (const row of csvData) {
         try {
@@ -145,11 +157,37 @@ export function useStudentData(db) {
             soDienThoaiCha: sdtCha,
             soDienThoaiMe: sdtMe,
             email: row['Email']?.trim() || '',
-            // Huynh Trưởng dùng SĐT cá nhân, các ngành khác ưu tiên SĐT Cha/Mẹ
             soDienThoai: isHuynhTruong ? sdtCaNhan : (sdtCha || sdtMe || '')
           };
 
-          if (studentData.hoTen && studentData.lop) {
+          if (!studentData.hoTen || !studentData.lop) {
+            skippedCount++;
+            continue;
+          }
+
+          // Kiểm tra duplicate dựa trên Họ tên + Ngày sinh hoặc Họ tên + Lớp
+          const duplicateStudent = existingStudents.find(existing => {
+            const sameName = existing.hoTen === studentData.hoTen;
+            const sameBirth = existing.ngaySinh === studentData.ngaySinh;
+            const sameClass = existing.lop === studentData.lop;
+
+            return sameName && (sameBirth || sameClass);
+          });
+
+          if (duplicateStudent) {
+            // Kiểm tra xem dữ liệu mới có đầy đủ thông tin hơn không
+            const shouldUpdate = shouldUpdateStudent(duplicateStudent, studentData);
+
+            if (shouldUpdate) {
+              // Update thông tin học sinh đã tồn tại
+              const studentRef = doc(db, `artifacts/${appId}/public/data/students`, duplicateStudent.id);
+              await updateDoc(studentRef, studentData);
+              updatedCount++;
+            } else {
+              skippedCount++;
+            }
+          } else {
+            // Thêm học sinh mới
             await addDoc(studentsRef, studentData);
             importedCount++;
           }
@@ -159,11 +197,37 @@ export function useStudentData(db) {
         }
       }
 
-      setMessage(`Đã import thành công ${importedCount} học sinh. ${errorCount > 0 ? `Có ${errorCount} lỗi.` : ''}`);
+      setMessage(`Import hoàn tất: ${importedCount} học sinh mới, ${updatedCount} học sinh được cập nhật, ${skippedCount} học sinh đã tồn tại, ${errorCount} lỗi.`);
     } catch (error) {
       console.error("Lỗi khi import CSV:", error);
       setMessage('Lỗi khi import CSV. Vui lòng thử lại.');
     }
+  };
+
+  // Hàm kiểm tra có nên update thông tin hay không
+  const shouldUpdateStudent = (existingStudent, newStudentData) => {
+    // Ưu tiên update nếu thông tin mới đầy đủ hơn
+    const fieldsToCheck = [
+      'tenThanh', 'ngaySinh', 'tenCha', 'tenMe',
+      'soDienThoaiCha', 'soDienThoaiMe', 'email', 'soDienThoai'
+    ];
+
+    for (const field of fieldsToCheck) {
+      const existingValue = existingStudent[field] || '';
+      const newValue = newStudentData[field] || '';
+
+      // Nếu thông tin mới có giá trị và khác với thông tin cũ
+      if (newValue && newValue !== existingValue) {
+        return true;
+      }
+    }
+
+    // Kiểm tra nếu lớp thay đổi
+    if (newStudentData.lop && newStudentData.lop !== existingStudent.lop) {
+      return true;
+    }
+
+    return false;
   };
 
   return {

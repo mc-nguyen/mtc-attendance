@@ -74,6 +74,15 @@ const AttendanceView = ({
     (a, b) => LOP_LIST.indexOf(a.lop) - LOP_LIST.indexOf(b.lop)
   );
 
+  const getNganhFromLop = (lop) => {
+    for (const [nganh, classes] of Object.entries(NGANH_MAP)) {
+      if (classes.includes(lop)) {
+        return nganh;
+      }
+    }
+    return "Khác";
+  };
+
   return (
     <div className="view-container">
       <h2 className="title">Điểm Danh</h2>
@@ -149,7 +158,7 @@ const AttendanceView = ({
           <tbody>
             {sortedStudents.length > 0 ? (
               sortedStudents.map(student => (
-                <tr key={student.id} className="table-row">
+                <tr key={student.id} className="table-row" data-nganh={getNganhFromLop(student.lop)}>
                   <td className="table-cell bold">{student.tenThanh}</td>
                   <td className="table-cell">{student.hoTen}</td>
                   <td className="table-cell">{student.ngaySinh}</td>
@@ -159,8 +168,6 @@ const AttendanceView = ({
                   </td>
                   <td className="table-cell text-center">
                     <select
-                      data-student-id={student.id}
-                      data-criterion="present"
                       value={currentAttendance[student.id]?.present || "vắng mặt"}
                       onChange={(e) =>
                         setCurrentAttendance({
@@ -182,8 +189,6 @@ const AttendanceView = ({
                   <td className="table-cell text-center">
                     <input
                       type="checkbox"
-                      data-student-id={student.id}
-                      data-criterion="holyBouquet"
                       checked={currentAttendance[student.id]?.holyBouquet || false}
                       onChange={(e) =>
                         setCurrentAttendance({
@@ -199,8 +204,6 @@ const AttendanceView = ({
                   <td className="table-cell text-center">
                     <input
                       type="checkbox"
-                      data-student-id={student.id}
-                      data-criterion="uniform"
                       checked={currentAttendance[student.id]?.uniform || false}
                       onChange={(e) =>
                         setCurrentAttendance({

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { collection, onSnapshot, doc, query, where, getDocs, setDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 
 const appId = 'mtc-attendance-app';
 
@@ -18,62 +18,48 @@ function getCurrentMonth() {
 function generateMonthOptions() {
   const options = [];
   const currentYear = new Date().getFullYear();
-  for (let month = 1; month <= 12; month++) {
-    const monthStr = month.toString().padStart(2, '0');
-    options.push({
-      value: `${currentYear}-${monthStr}`,
-      label: `Tháng ${monthStr}/${currentYear}`
-    });
+  for (let year = currentYear - 1; year <= currentYear + 1; year++) {
+    for (let month = 1; month <= 12; month++) {
+      const monthStr = month.toString().padStart(2, '0');
+      options.push({
+        value: `${year}-${monthStr}`,
+        label: `Tháng ${monthStr}/${year}`
+      });
+    }
   }
   return options;
 }
 
-const NGANH_MAP = {
-  "Ấu Nhi": [
-    "Ấu Nhi Dự Bị", "Ấu Nhi Cấp 1", "Ấu Nhi Cấp 2", "Ấu Nhi Cấp 3"
-  ],
-  "Thiếu Nhi": [
-    "Thiếu Nhi Cấp 1", "Thiếu Nhi Cấp 2", "Thiếu Nhi Cấp 3"
-  ],
-  "Nghĩa Sĩ": [
-    "Nghĩa Sĩ Cấp 1", "Nghĩa Sĩ Cấp 2", "Nghĩa Sĩ Cấp 3"
-  ],
-  "Hiệp Sĩ": [
-    "Hiệp Sĩ Cấp 1", "Hiệp Sĩ Cấp 2"
-  ],
-  "Huynh Trưởng": [
-    "Hiệp Sĩ Trưởng Thành", "Huynh Trưởng", "Huấn Luyện Viên"
-  ]
-};
-
 export function useAttendanceRecords(db, students, LOP_LIST) {
-  const [attendanceRecords, setAttendanceRecords] = useState([]);
   const [selectedNganh, setSelectedNganh] = useState("Tất cả");
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [currentAttendance, setCurrentAttendance] = useState({});
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
 
-  useEffect(() => {
-    if (!db) return;
-    const attendanceRef = collection(db, `artifacts/${appId}/public/data/attendance`);
-    const unsubscribe = onSnapshot(attendanceRef, (snapshot) => {
-      const attendanceData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setAttendanceRecords(attendanceData);
-    });
-    return () => unsubscribe();
-  }, [db]);
+  // Lấy tất cả Chủ Nhật trong tháng
+  const getSundaysInMonth = (year, month) => {
+    const sundays = [];
+    const date = new Date(year, month - 1, 1);
+    while (date.getMonth() === month - 1) {
+      if (date.getDay() === 0) {
+        sundays.push(date.toISOString().split('T')[0]);
+      }
+      date.setDate(date.getDate() + 1);
+    }
+    return sundays;
+  };
 
+  // Load điểm danh khi chọn ngày
   useEffect(() => {
-    const fetchAttendance = async () => {
-      if (!db) return;
+    const loadAttendance = async () => {
+      if (!db || !selectedDate) return;
+
       try {
-        const docId = `${selectedDate}_${selectedNganh}`;
-        const attendanceDocRef = doc(db, `artifacts/${appId}/public/data/attendance`, docId);
-        const docSnapshot = await getDocs(attendanceDocRef);
-        
+        const attendanceDocRef = doc(db, `artifacts/${appId}/public/data/attendance`, selectedDate);
+        const docSnapshot = await getDoc(attendanceDocRef);
+
         if (docSnapshot.exists()) {
-          const docData = docSnapshot.data();
-          setCurrentAttendance(docData.diemDanh || {});
+          setCurrentAttendance(docSnapshot.data());
         } else {
           setCurrentAttendance({});
         }
@@ -82,112 +68,86 @@ export function useAttendanceRecords(db, students, LOP_LIST) {
         setCurrentAttendance({});
       }
     };
-    fetchAttendance();
-  }, [db, selectedDate, selectedNganh]);
 
+    loadAttendance();
+  }, [db, selectedDate]);
+
+  // Lưu điểm danh
   const handleSaveAttendance = async () => {
-    if (!db) return;
+    if (!db || !selectedDate) return;
+
     try {
-      // Tạo ID duy nhất kết hợp ngày và ngành
-      const docId = `${selectedDate}_${selectedNganh}`;
-      const attendanceDocRef = doc(db, `artifacts/${appId}/public/data/attendance`, docId);
+      const attendanceDocRef = doc(db, `artifacts/${appId}/public/data/attendance`, selectedDate);
 
-      // Lọc học sinh theo ngành
-      const filteredStudents = selectedNganh === "Tất cả"
-        ? students
-        : students.filter(s => NGANH_MAP[selectedNganh]?.includes(s.lop));
+      // Chỉ lưu những học sinh có thay đổi
+      const attendanceToSave = { ...currentAttendance };
 
-      const attendanceToSave = {};
-      filteredStudents.forEach(student => {
-        const studentAttendance = currentAttendance[student.id] || {};
-        attendanceToSave[student.id] = {
-          present: studentAttendance.present || "vắng mặt",
-          holyBouquet: studentAttendance.holyBouquet || false,
-          uniform: studentAttendance.uniform || false
-        };
-      });
-
-      await setDoc(attendanceDocRef, {
-        diemDanh: attendanceToSave,
-        ngayDiemDanh: selectedDate,
-        nganh: selectedNganh
-      }, { merge: true });
-
-      alert("Đã lưu điểm danh thành công!");
+      await setDoc(attendanceDocRef, attendanceToSave);
+      alert("✅ Đã lưu điểm danh thành công!");
     } catch (error) {
       console.error("Lỗi khi lưu điểm danh:", error);
-      alert("Lỗi khi lưu điểm danh: " + error.message);
+      alert("❌ Lỗi khi lưu điểm danh: " + error.message);
     }
   };
 
-  // --------- BÁO CÁO THEO THÁNG -----------
+  // Tính báo cáo tháng
   const calculateReport = useCallback(async () => {
+    if (!db) return { reportData: [], monthInfo: {} };
+
     const [year, month] = selectedMonth.split('-').map(Number);
-    const startDate = `${year}-${month.toString().padStart(2, '0')}-01`;
-    const endDate = `${year}-${month.toString().padStart(2, '0')}-31`;
+    const sundays = getSundaysInMonth(year, month);
 
-    const reportData = {};
-    students.forEach((student) => {
-      reportData[student.id] = {
-        ...student,
-        attendanceDays: 0,
-        totalScore: 0,
-        details: {},
-      };
-    });
+    // Tạo cấu trúc báo cáo ban đầu
+    const reportData = students.map(student => ({
+      ...student,
+      attendanceDays: 0,
+      totalScore: 0,
+      attendanceDetails: sundays.reduce((acc, sunday) => {
+        acc[sunday] = { present: "vắng mặt", holyBouquet: false, uniform: false, score: 0 };
+        return acc;
+      }, {})
+    }));
 
-    // Lấy tất cả các tài liệu điểm danh trong tháng
-    const q = query(
-      collection(db, `artifacts/${appId}/public/data/attendance`),
-      where('ngayDiemDanh', '>=', startDate),
-      where('ngayDiemDanh', '<=', endDate)
-    );
+    // Lấy dữ liệu điểm danh cho tất cả Chủ Nhật trong tháng
+    for (const sunday of sundays) {
+      try {
+        const attendanceDocRef = doc(db, `artifacts/${appId}/public/data/attendance`, sunday);
+        const docSnapshot = await getDoc(attendanceDocRef);
 
-    const querySnapshot = await getDocs(q);
+        if (docSnapshot.exists()) {
+          const attendanceData = docSnapshot.data();
 
-    querySnapshot.forEach((doc) => {
-      const record = doc.data();
-      const ngayDiemDanh = record.ngayDiemDanh;
+          Object.entries(attendanceData).forEach(([studentId, attendance]) => {
+            const studentReport = reportData.find(s => s.id === studentId);
+            if (studentReport && attendance) {
+              let score = DIEM_DIEM_DANH[attendance.present] || 0;
+              if (attendance.holyBouquet) score += 1;
+              if (attendance.uniform) score += 1;
 
-      // Lặp qua từng học sinh trong điểm danh
-      Object.entries(record.diemDanh).forEach(([studentId, attendance]) => {
-        if (reportData[studentId]) {
-          let dayScore = 0;
-          if (attendance.present in DIEM_DIEM_DANH) {
-            dayScore += DIEM_DIEM_DANH[attendance.present];
-          }
-          if (attendance.holyBouquet) {
-            dayScore += 1;
-          }
-          if (attendance.uniform) {
-            dayScore += 1;
-          }
+              studentReport.attendanceDetails[sunday] = {
+                present: attendance.present,
+                holyBouquet: attendance.holyBouquet,
+                uniform: attendance.uniform,
+                score: score
+              };
 
-          reportData[studentId].totalScore += dayScore;
-          reportData[studentId].attendanceDays += 1;
-          reportData[studentId].details[ngayDiemDanh] = {
-            score: dayScore,
-            present: attendance.present,
-            holyBouquet: attendance.holyBouquet,
-            uniform: attendance.uniform,
-          };
+              studentReport.totalScore += score;
+            }
+          });
         }
-      });
-    });
-
-    // Sắp xếp theo LOP_LIST
-    const sortedReportData = Object.values(reportData).sort(
-      (a, b) => LOP_LIST.indexOf(a.lop) - LOP_LIST.indexOf(b.lop)
-    );
+      } catch (error) {
+        console.error(`Lỗi khi tải điểm danh ngày ${sunday}:`, error);
+      }
+    }
 
     return {
-      reportData: sortedReportData,
+      reportData: reportData.sort((a, b) => LOP_LIST.indexOf(a.lop) - LOP_LIST.indexOf(b.lop)),
       monthInfo: { year, month },
+      sundays: sundays
     };
   }, [db, students, selectedMonth, LOP_LIST]);
 
   return {
-    attendanceRecords,
     selectedNganh,
     setSelectedNganh,
     selectedDate,
@@ -199,5 +159,6 @@ export function useAttendanceRecords(db, students, LOP_LIST) {
     generateMonthOptions,
     handleSaveAttendance,
     calculateReport,
+    getSundaysInMonth
   };
 }

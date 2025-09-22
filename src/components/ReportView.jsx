@@ -22,6 +22,16 @@ const ReportView = ({
   const [reportFilterNganh, setReportFilterNganh] = useState("Tất cả");
   const [expandedStudent, setExpandedStudent] = useState(null);
 
+  // Hàm xác định ngành từ lớp
+  const getNganhFromLop = (lop) => {
+    for (const [nganh, classes] of Object.entries(NGANH_MAP)) {
+      if (classes.includes(lop)) {
+        return nganh;
+      }
+    }
+    return "Khác";
+  };
+
   // Lọc học sinh theo ngành
   const filteredStudents = reportFilterNganh === "Tất cả"
     ? reportData
@@ -35,19 +45,39 @@ const ReportView = ({
     setExpandedStudent(expandedStudent === studentId ? null : studentId);
   };
 
-  const getNganhFromLop = (lop) => {
-    for (const [nganh, classes] of Object.entries(NGANH_MAP)) {
-      if (classes.includes(lop)) {
-        return nganh;
-      }
+  // Hàm xác định class CSS dựa trên trạng thái điểm danh
+  const getAttendanceClass = (presentStatus) => {
+    switch (presentStatus) {
+      case 'đúng giờ':
+        return 'present-on-time';
+      case 'trễ 15 phút':
+      case 'trễ 30 phút':
+        return 'present-late';
+      case 'vắng mặt':
+      default:
+        return 'absent';
     }
-    return "Khác";
+  };
+
+  // Hàm hiển thị trạng thái điểm danh
+  const renderAttendanceStatus = (presentStatus) => {
+    switch (presentStatus) {
+      case 'đúng giờ':
+        return '✓ có mặt';
+      case 'trễ 15 phút':
+        return '⌛ trễ 15p';
+      case 'trễ 30 phút':
+        return '⌛ trễ 30p';
+      case 'vắng mặt':
+      default:
+        return '✗ vắng mặt';
+    }
   };
 
   return (
     <div className="view-container">
       <h2 className="title">Báo Cáo Điểm Danh Theo Ngành</h2>
-
+      
       <div className="form-group" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
         <div>
           <label htmlFor="month-select" className="label">Chọn Tháng</label>
@@ -93,7 +123,7 @@ const ReportView = ({
             {sortedStudents.length > 0 ? (
               sortedStudents.map((student, idx) => (
                 <React.Fragment key={student.id}>
-                  <tr key={student.id} className="table-row" data-nganh={getNganhFromLop(student.lop)}>
+                  <tr className="table-row" data-nganh={getNganhFromLop(student.lop)}>
                     <td className="table-cell text-center">{idx + 1}</td>
                     <td className="table-cell">{student.hoTen}</td>
                     <td className="table-cell">{student.lop}</td>
@@ -108,7 +138,7 @@ const ReportView = ({
                       </button>
                     </td>
                   </tr>
-
+                  
                   {expandedStudent === student.id && (
                     <tr>
                       <td colSpan="5" style={{ padding: '0' }}>
@@ -128,9 +158,9 @@ const ReportView = ({
                               {sundays.map(sunday => {
                                 const detail = student.attendanceDetails[sunday] || {};
                                 return (
-                                  <tr key={sunday}>
+                                  <tr key={sunday} className={getAttendanceClass(detail.present)}>
                                     <td>{sunday}</td>
-                                    <td>{detail.present || 'vắng mặt'}</td>
+                                    <td>{renderAttendanceStatus(detail.present)}</td>
                                     <td>{detail.holyBouquet ? '✓' : '✗'}</td>
                                     <td>{detail.uniform ? '✓' : '✗'}</td>
                                     <td>{detail.score || 0}</td>

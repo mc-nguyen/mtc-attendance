@@ -441,3 +441,35 @@ body {
     width: 100%;
   }
 }
+
+/* Highlight cho điểm danh */
+.present-on-time {
+  background-color: rgba(76, 175, 80, 0.15) !important;
+}
+
+.present-on-time td:first-child {
+  border-left: 4px solid #4caf50;
+}
+
+.present-late {
+  background-color: rgba(255, 193, 7, 0.15) !important;
+}
+
+.present-late td:first-child {
+  border-left: 4px solid #ffc107;
+}
+
+.absent {
+  background-color: rgba(244, 67, 54, 0.08) !important;
+}
+
+.absent td:first-child {
+  border-left: 4px solid #f44336;
+}
+
+/* Hiệu ứng hover cho các hàng chi tiết */
+.present-on-time:hover,
+.present-late:hover,
+.absent:hover {
+  filter: brightness(0.98);
+}

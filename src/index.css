@@ -2,34 +2,40 @@
 
 /* Biến màu sắc cho các ngành */
 :root {
-  --au-nhi-color: #4caf50;        /* Xanh lá - Ấu Nhi */
-  --thieu-nhi-color: #2196f3;     /* Xanh dương - Thiếu Nhi */
-  --nghia-si-color: #ffc107;      /* Vàng - Nghĩa Sĩ */
-  --hiep-si-color: #795548;       /* Nâu - Hiệp Sĩ */
-  --huynh-truong-color: #f44336;  /* Đỏ - Huynh Trưởng */
-  --default-color: #9e9e9e;       /* Xám mặc định */
-  
+  --au-nhi-color: #4caf50;
+  /* Xanh lá - Ấu Nhi */
+  --thieu-nhi-color: #2196f3;
+  /* Xanh dương - Thiếu Nhi */
+  --nghia-si-color: #ffc107;
+  /* Vàng - Nghĩa Sĩ */
+  --hiep-si-color: #795548;
+  /* Nâu - Hiệp Sĩ */
+  --huynh-truong-color: #f44336;
+  /* Đỏ - Huynh Trưởng */
+  --default-color: #9e9e9e;
+  /* Xám mặc định */
+
   /* Màu chữ tương phản */
   --light-text: #ffffff;
   --dark-text: #333333;
-  
+
   /* Màu nền */
   --background-light: #f8f9fa;
   --background-white: #ffffff;
-  
+
   /* Màu viền */
   --border-color: #dee2e6;
-  
+
   /* Màu nút */
   --primary-button: #5d4037;
   --primary-button-hover: #4e342e;
   --secondary-button: #e0e0e0;
   --secondary-button-hover: #d5d5d5;
-  
+
   /* Bóng đổ */
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
-  --shadow-md: 0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23);
-  --shadow-lg: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+  --shadow-md: 0 3px 6px rgba(0, 0, 0, 0.16), 0 3px 6px rgba(0, 0, 0, 0.23);
+  --shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.19), 0 6px 6px rgba(0, 0, 0, 0.23);
 }
 
 /* Reset và base styles */
@@ -191,11 +197,15 @@ body {
 }
 
 .table-header {
+  position: sticky;
+  top: 0;
   background-color: var(--primary-button);
   color: var(--light-text);
 }
 
 .table-header th {
+  position: sticky;
+  top: 0;
   padding: 16px;
   text-align: left;
   font-weight: 600;
@@ -358,8 +368,13 @@ body {
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .loading-text {
@@ -393,30 +408,30 @@ body {
   .main-container {
     padding: 10px;
   }
-  
+
   .view-container {
     padding: 16px;
   }
-  
+
   .title {
     font-size: 24px;
   }
-  
+
   .nav-button {
     padding: 10px 16px;
     font-size: 14px;
   }
-  
+
   .form-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .table-header th,
   .table-cell {
     padding: 8px 12px;
     font-size: 14px;
   }
-  
+
   .modal-container {
     margin: 10px;
     width: calc(100% - 20px);
@@ -427,15 +442,15 @@ body {
   .nav-button-container {
     flex-direction: column;
   }
-  
+
   .nav-button {
     width: 100%;
   }
-  
+
   .modal-actions {
     flex-direction: column;
   }
-  
+
   .btn-primary,
   .btn-secondary {
     width: 100%;

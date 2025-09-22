@@ -13,7 +13,6 @@ const NGANH_LIST = Object.keys(NGANH_MAP);
 
 const ReportView = ({
   reportData,
-  monthInfo,
   selectedMonth,
   setSelectedMonth,
   monthOptions,

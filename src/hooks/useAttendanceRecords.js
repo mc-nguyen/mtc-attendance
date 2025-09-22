@@ -50,12 +50,14 @@ export function useAttendanceRecords(db, students, LOP_LIST) {
   };
 
   // Load điểm danh khi chọn ngày
+  // Sửa lại useEffect loadAttendance
   useEffect(() => {
     const loadAttendance = async () => {
-      if (!db || !selectedDate) return;
+      if (!db || !selectedMonth) return; // ĐỔI: selectedDate → selectedMonth
 
       try {
-        const attendanceDocRef = doc(db, `artifacts/${appId}/public/data/attendance`, selectedDate);
+        // ĐỔI: Đọc theo tháng thay vì theo ngày
+        const attendanceDocRef = doc(db, `artifacts/${appId}/public/data/attendance`, selectedMonth);
         const docSnapshot = await getDoc(attendanceDocRef);
 
         if (docSnapshot.exists()) {
@@ -70,14 +72,14 @@ export function useAttendanceRecords(db, students, LOP_LIST) {
     };
 
     loadAttendance();
-  }, [db, selectedDate]);
+  }, [db, selectedMonth]); // ĐỔI: selectedDate → selectedMonth
 
   // Lưu điểm danh
   const handleSaveAttendance = async () => {
-    if (!db || !selectedDate) return;
+    if (!db || !selectedMonth) return;
 
     try {
-      const attendanceDocRef = doc(db, `artifacts/${appId}/public/data/attendance`, selectedDate);
+      const attendanceDocRef = doc(db, `artifacts/${appId}/public/data/attendance`, selectedMonth);
 
       // Chỉ lưu những học sinh có thay đổi
       const attendanceToSave = { ...currentAttendance };
@@ -91,6 +93,7 @@ export function useAttendanceRecords(db, students, LOP_LIST) {
   };
 
   // Tính báo cáo tháng
+  // useAttendanceRecords.js - SỬA LẠI calculateReport
   const calculateReport = useCallback(async () => {
     if (!db) return { reportData: [], monthInfo: {} };
 
@@ -108,36 +111,39 @@ export function useAttendanceRecords(db, students, LOP_LIST) {
       }, {})
     }));
 
-    // Lấy dữ liệu điểm danh cho tất cả Chủ Nhật trong tháng
-    for (const sunday of sundays) {
-      try {
-        const attendanceDocRef = doc(db, `artifacts/${appId}/public/data/attendance`, sunday);
-        const docSnapshot = await getDoc(attendanceDocRef);
+    try {
+      // THAY ĐỔI QUAN TRỌNG: Đọc dữ liệu điểm danh THEO THÁNG thay vì theo ngày
+      const monthlyAttendanceDocRef = doc(db, `artifacts/${appId}/public/data/attendance`, selectedMonth);
+      const monthlyDocSnapshot = await getDoc(monthlyAttendanceDocRef);
 
-        if (docSnapshot.exists()) {
-          const attendanceData = docSnapshot.data();
+      if (monthlyDocSnapshot.exists()) {
+        const monthlyAttendanceData = monthlyDocSnapshot.data();
 
-          Object.entries(attendanceData).forEach(([studentId, attendance]) => {
-            const studentReport = reportData.find(s => s.id === studentId);
-            if (studentReport && attendance) {
-              let score = DIEM_DIEM_DANH[attendance.present] || 0;
-              if (attendance.holyBouquet) score += 1;
-              if (attendance.uniform) score += 1;
+        // Duyệt qua tất cả học sinh và các ngày Chủ Nhật
+        reportData.forEach(studentReport => {
+          const studentId = studentReport.id;
+          const studentAttendance = monthlyAttendanceData[studentId] || {};
 
-              studentReport.attendanceDetails[sunday] = {
-                present: attendance.present,
-                holyBouquet: attendance.holyBouquet,
-                uniform: attendance.uniform,
-                score: score
-              };
+          sundays.forEach(sunday => {
+            const sundayAttendance = studentAttendance[sunday] || {};
 
-              studentReport.totalScore += score;
-            }
+            let score = DIEM_DIEM_DANH[sundayAttendance.present] || 0;
+            if (sundayAttendance.holyBouquet) score += 1;
+            if (sundayAttendance.uniform) score += 1;
+
+            studentReport.attendanceDetails[sunday] = {
+              present: sundayAttendance.present || "vắng mặt",
+              holyBouquet: sundayAttendance.holyBouquet || false,
+              uniform: sundayAttendance.uniform || false,
+              score: score
+            };
+
+            studentReport.totalScore += score;
           });
-        }
-      } catch (error) {
-        console.error(`Lỗi khi tải điểm danh ngày ${sunday}:`, error);
+        });
       }
+    } catch (error) {
+      console.error(`Lỗi khi tải điểm danh tháng ${selectedMonth}:`, error);
     }
 
     return {

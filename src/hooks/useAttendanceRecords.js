@@ -5,8 +5,8 @@ const appId = 'mtc-attendance-app';
 
 export const DIEM_DIEM_DANH = {
   "đúng giờ": 3,
-  "trễ 15 phút": 2,
-  "trễ 30 phút": 1,
+  "trễ": 2,
+  "có phép": 1,
   "vắng mặt": 0
 };
 

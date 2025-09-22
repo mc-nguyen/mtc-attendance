@@ -222,8 +222,8 @@ const AttendanceView = ({
                             }}
                           >
                             <option value="đúng giờ">Đúng giờ</option>
-                            <option value="trễ 15 phút">Trễ 15p</option>
-                            <option value="trễ 30 phút">Trễ 30p</option>
+                            <option value="trễ">Trễ</option>
+                            <option value="có phép">Có phép</option>
                             <option value="vắng mặt">Vắng mặt</option>
                           </select>
 

@@ -49,9 +49,10 @@ const ReportView = ({
     switch (presentStatus) {
       case 'đúng giờ':
         return 'present-on-time';
-      case 'trễ 15 phút':
-      case 'trễ 30 phút':
+      case 'trễ':
         return 'present-late';
+      case 'có phép':
+        return 'excused';
       case 'vắng mặt':
       default:
         return 'absent';
@@ -63,10 +64,10 @@ const ReportView = ({
     switch (presentStatus) {
       case 'đúng giờ':
         return '✓ có mặt';
-      case 'trễ 15 phút':
-        return '⌛ trễ 15p';
-      case 'trễ 30 phút':
-        return '⌛ trễ 30p';
+      case 'trễ':
+        return '⌛ trễ';
+      case 'có phép':
+        return '🗯️ có phép';
       case 'vắng mặt':
       default:
         return '✗ vắng mặt';

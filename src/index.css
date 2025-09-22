@@ -474,6 +474,14 @@ body {
   border-left: 4px solid #ffc107;
 }
 
+.excused {
+  background-color: rgba(7, 156, 255, 0.15) !important;
+}
+
+.excused td:first-child {
+  border-left: 4px solid #07b9ff;
+}
+
 .absent {
   background-color: rgba(244, 67, 54, 0.08) !important;
 }

@@ -40,12 +40,21 @@ export function useAttendanceRecords(db, students, LOP_LIST) {
   const getSundaysInMonth = (year, month) => {
     const sundays = [];
     const date = new Date(year, month - 1, 1);
+
     while (date.getMonth() === month - 1) {
       if (date.getDay() === 0) {
-        sundays.push(date.toISOString().split('T')[0]);
+        // Format theo giờ địa phương ở Mỹ
+        const formatted = date.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          weekday: 'long' // Optional: "Sunday"
+        });
+        sundays.push(formatted);
       }
       date.setDate(date.getDate() + 1);
     }
+
     return sundays;
   };
 

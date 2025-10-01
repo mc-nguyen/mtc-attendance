@@ -23,13 +23,24 @@ const NGANH_LIST = Object.keys(NGANH_MAP);
 
 function getSundaysOfMonth(year, month) {
   const sundays = [];
+  const firstDay = new Date(year, month - 1, 1);
   const daysInMonth = new Date(year, month, 0).getDate();
-  for (let d = 1; d <= daysInMonth; d++) {
+
+  const firstSunday = firstDay.getDay() === 0
+    ? 1
+    : 8 - firstDay.getDay();
+
+  for (let d = firstSunday; d <= daysInMonth; d += 7) {
     const date = new Date(year, month - 1, d);
-    if (date.getDay() === 0) {
-      sundays.push(date.toISOString().split('T')[0]);
-    }
+    const formatted = date.toLocaleDateString('en-US', {
+      weekday: 'long', // Sunday
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+    sundays.push(formatted);
   }
+
   return sundays;
 }
 
